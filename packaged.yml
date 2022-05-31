@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Images Transformer - Serverless Application
+Transform: AWS::Serverless-2016-10-31
+Globals:
+  Function:
+    Environment:
+      Variables:
+        TABLE_NAME:
+          Ref: StackName
+        REGION:
+          Fn::Sub: ${AWS::Region}
+Parameters:
+  StackName:
+    Type: String
+    Default: image_transform
+    MinLength: 3
+    MaxLength: 50
+    AllowedPattern: ^[A-Za-z_]+$
+    ConstraintDescription: Required. Can be characters and underscore only. No numbers
+      or special characters allowed.
+Resources:
+  SimpleQueue:
+    Type: AWS::SQS::Queue
+  loadImageListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://qrvey-challenge/2ad7958ec64d5d163ab260aa236cf413
+      Handler: src/handlers/load-image-list.loadImageListHandler
+      Runtime: nodejs14.x
+      MemorySize: 128
+      Timeout: 25
+      Environment:
+        Variables:
+          QUEUE_URL:
+            Ref: SimpleQueue
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - SQSSendMessagePolicy:
+          QueueName:
+            Fn::GetAtt:
+            - SimpleQueue
+            - QueueName
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: StackName
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /load-image-list
+            Method: POST
+  processImageListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: s3://qrvey-challenge/2ad7958ec64d5d163ab260aa236cf413
+      Handler: src/handlers/process-image-list.processImageListHandler
+      Runtime: nodejs14.x
+      MemorySize: 128
+      Timeout: 25
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: StackName
+      Events:
+        SimpleQueueEvent:
+          Type: SQS
+          Properties:
+            Queue:
+              Fn::GetAtt:
+              - SimpleQueue
+              - Arn
+  ImagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: id
+        AttributeType: S
+      - AttributeName: requestId
+        AttributeType: S
+      KeySchema:
+      - AttributeName: id
+        KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      TableName:
+        Ref: StackName
+      GlobalSecondaryIndexes:
+      - IndexName: request-index
+        KeySchema:
+        - AttributeName: requestId
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
+Outputs:
+  Endpoint:
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/

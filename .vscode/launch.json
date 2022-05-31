@@ -1,0 +1,61 @@
+{
+    "configurations": [
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "challenge-qrvey:processImageListFunction",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "${workspaceFolder}/template.yml",
+                "logicalId": "processImageListFunction"
+            },
+            "lambda": {
+                "payload": {
+                    "json": {
+                        "Records": [
+                            {
+                                "messageId": "f1caf720-e708-40d6-947c-98efa6ded36b",
+                                "receiptHandle": "AQEBnSfBTY8ns/1/uiBJNcIMjL/x026zOgHjamSkjiTjpAdp5IzKZw2QakM9rnCbbt8f2nNx5mqVFsaMc6zsDQ9suE9XKtV43tHxJf8qTY8Vby0Brvrj1+9GfGowznqLiDwnwZ+tqEBCr0p8BOCo3XLaQDpJjKYlqZpF2CVycczG+T9wtHbcC8E0qF8gWZCwJxwgi0443nk1rowPheS6Rr0pLghJPbbZFZsvvlAlEYhsObLRqLr5106UOiknquiDq0blJ06WrcCwGmwSxlUgVRQPcxhA5mts30Ha7IwO7WSRNNPFQBeru/PYKzthvOip3zkK4epSgtVZhouWzkmyFpraUVlXPuqFv2Lr5wOGQI4OW8XuUGEm52WnnuL7bvPEYuz/ifEWH6+tb4I3xyeFFGVSaQ==",
+                                "body": "{\"requestId\":\"6eaa6bd0-863d-4c66-b640-b2e595007665\",\"isProcessed\":false}",
+                                "attributes": {
+                                    "ApproximateReceiveCount": "1",
+                                    "SentTimestamp": "1653883463299",
+                                    "SenderId": "AROAXC4UFIKSAV5IM2MNW:qrvey-loadImageListFunction-eGNLsjFIuLPs",
+                                    "ApproximateFirstReceiveTimestamp": "1653883463318"
+                                },
+                                "messageAttributes": {},
+                                "md5OfBody": "562bf82cc01855ab2f74ec04bd19020e",
+                                "eventSource": "aws:sqs",
+                                "eventSourceARN": "arn:aws:sqs:us-east-1:487252640420:qrvey-SimpleQueue-av8aH7KoVy01",
+                                "awsRegion": "us-east-1"
+                            }
+                        ]
+                    }
+                },
+                "environmentVariables": {}
+            }
+        },
+        {
+            "type": "aws-sam",
+            "request": "direct-invoke",
+            "name": "challenge-qrvey:loadImageListFunction",
+            "invokeTarget": {
+                "target": "template",
+                "templatePath": "${workspaceFolder}/template.yml",
+                "logicalId": "loadImageListFunction"
+            },
+            "api": {
+                "path": "/load-image-list",
+                "httpMethod": "POST",
+                "payload": {
+                    "json": {
+                        "body": "{\"images\":[\"image.jpeg\",\"image2.jpeg\"]}",
+                        "requestContext": {
+                            "apiId": "1bah1ffs83"
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

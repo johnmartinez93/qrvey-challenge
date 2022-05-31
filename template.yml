@@ -1,0 +1,113 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  Images Transformer - Serverless Application
+
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Environment:
+      Variables:
+        TABLE_NAME: !Ref StackName
+        REGION: !Sub ${AWS::Region}
+
+Parameters:
+  StackName:
+    Type: String
+    Default: "image_transform"
+    MinLength: 3
+    MaxLength: 50
+    AllowedPattern: ^[A-Za-z_]+$
+    ConstraintDescription: "Required. Can be characters and underscore only. No numbers or special characters allowed."
+
+Resources:
+  SimpleQueue:
+    Type: AWS::SQS::Queue
+
+  loadImageListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/load-image-list.loadImageListHandler
+      Runtime: nodejs14.x
+      MemorySize: 128
+      Timeout: 25
+      Environment:
+        Variables:
+          QUEUE_URL: !Ref SimpleQueue
+          # QUEUE_URL: 'https://sqs.us-east-1.amazonaws.com/487252640420/qrvey-SimpleQueue-av8aH7KoVy01'
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt SimpleQueue.QueueName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StackName
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /load-image-list
+            Method: POST
+  processImageListFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/process-image-list.processImageListHandler
+      Runtime: nodejs14.x
+      MemorySize: 512
+      Timeout: 900
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref StackName
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:*
+              Resource: "*"
+      Events:
+        SimpleQueueEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SimpleQueue.Arn
+  getZipImagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/handlers/get-zip-images.getZipImagesHandler
+      Runtime: nodejs14.x
+      MemorySize: 128
+      Timeout: 25
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /download-zip-images
+            Method: GET
+
+  ImagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: requestId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: True
+      TableName: !Ref StackName
+      GlobalSecondaryIndexes:
+        - IndexName: request-index
+          KeySchema:
+            - AttributeName: requestId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+Outputs:
+  Endpoint:
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
